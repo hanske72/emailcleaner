@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8" />
+  <title>Logg inn</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <script>
+    var CLIENT_ID = "4c066262-9ddc-41c4-8029-5278143ab3fd";
+    var TENANT_ID = "a50ee71c-5f5c-42a9-b21d-f2ec69fc4920";
+    var REDIRECT_URI = "https://geolead.no/addin/auth-end.html";
+    var SCOPES = "User.Read Mail.Read Mail.ReadWrite";
+    var TOKEN_URL = "https://login.microsoftonline.com/" + TENANT_ID + "/oauth2/v2.0/token";
+    var AUTH_URL = "https://login.microsoftonline.com/" + TENANT_ID + "/oauth2/v2.0/authorize";
+    var VERIFIER_KEY = "epostrydder_pkce_verifier";
+
+    function setStatus(msg) {
+      var el = document.getElementById("status");
+      if (el) el.textContent = msg;
+    }
+
+    // PKCE helpers
+    function generateRandom(len) {
+      var arr = new Uint8Array(len);
+      crypto.getRandomValues(arr);
+      return Array.from(arr, function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+    }
+    function base64url(buffer) {
+      var bytes = new Uint8Array(buffer);
+      var str = "";
+      for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+      return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+    async function sha256(plain) {
+      var enc = new TextEncoder();
+      return await crypto.subtle.digest("SHA-256", enc.encode(plain));
+    }
+
+    function sendToParent(data) {
+      try {
+        Office.context.ui.messageParent(JSON.stringify(data));
+      } catch (e) {
+        setStatus("Feil ved sending til add-in: " + e.message);
+      }
+    }
+
+    async function exchangeCodeForToken(code, codeVerifier) {
+      setStatus("Veksler kode mot token...");
+      var body = "client_id=" + encodeURIComponent(CLIENT_ID)
+        + "&scope=" + encodeURIComponent(SCOPES)
+        + "&code=" + encodeURIComponent(code)
+        + "&redirect_uri=" + encodeURIComponent(REDIRECT_URI)
+        + "&grant_type=authorization_code"
+        + "&code_verifier=" + encodeURIComponent(codeVerifier);
+
+      var res = await fetch(TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body
+      });
+      var data = await res.json();
+      if (data.access_token) {
+        setStatus("Innlogging OK! Lukker...");
+        sendToParent({
+          status: "success",
+          accessToken: data.access_token,
+          expiresIn: String(data.expires_in || 3600)
+        });
+      } else {
+        var errMsg = data.error_description || data.error || "Token-utveksling feilet";
+        setStatus("Feil: " + errMsg);
+        sendToParent({ status: "error", error: errMsg });
+      }
+    }
+
+    Office.onReady(async function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var code = params.get("code");
+        var error = params.get("error_description") || params.get("error");
+
+        if (code) {
+          // Step 2: Exchange code for token
+          setStatus("Mottok autorisasjonskode, henter token...");
+          // Try localStorage first (survives cross-origin redirects), then sessionStorage as fallback
+          var codeVerifier = localStorage.getItem(VERIFIER_KEY) || sessionStorage.getItem(VERIFIER_KEY);
+          if (!codeVerifier) {
+            var errMsg = "PKCE-verifier mangler etter redirect. Pr\u00f8v igjen.";
+            setStatus(errMsg);
+            sendToParent({ status: "error", error: errMsg });
+            return;
+          }
+          localStorage.removeItem(VERIFIER_KEY);
+          sessionStorage.removeItem(VERIFIER_KEY);
+          await exchangeCodeForToken(code, codeVerifier);
+        } else if (error) {
+          var decoded = decodeURIComponent(error.replace(/\+/g, " "));
+          setStatus("Feil: " + decoded);
+          sendToParent({ status: "error", error: decoded });
+        } else {
+          // Step 1: Start login — generate PKCE and redirect
+          setStatus("Forbereder innlogging...");
+          var codeVerifier = generateRandom(32);
+          // Store in BOTH localStorage and sessionStorage for maximum compatibility
+          localStorage.setItem(VERIFIER_KEY, codeVerifier);
+          sessionStorage.setItem(VERIFIER_KEY, codeVerifier);
+          var challengeBuffer = await sha256(codeVerifier);
+          var codeChallenge = base64url(challengeBuffer);
+
+          var authUrl = AUTH_URL
+            + "?client_id=" + CLIENT_ID
+            + "&response_type=code"
+            + "&redirect_uri=" + encodeURIComponent(REDIRECT_URI)
+            + "&scope=" + encodeURIComponent(SCOPES)
+            + "&code_challenge=" + codeChallenge
+            + "&code_challenge_method=S256"
+            + "&prompt=select_account";
+          window.location.href = authUrl;
+        }
+      } catch (e) {
+        setStatus("Feil: " + (e.message || "Ukjent feil"));
+        sendToParent({ status: "error", error: e.message || "Ukjent feil" });
+      }
+    });
+  </script>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;margin-top:60px;color:#555;">
+  <p id="status">Logger inn...</p>
+</body>
+</html>

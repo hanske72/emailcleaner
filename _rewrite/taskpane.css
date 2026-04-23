@@ -1,0 +1,364 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #f5f5f5;
+}
+
+.app {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #0078d4;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0078d4;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.icon-btn:hover {
+  background: #e8e8e8;
+}
+
+/* Settings panel */
+.settings-panel {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.settings-panel label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.settings-panel input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.settings-panel button {
+  background: #0078d4;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.settings-panel button:disabled {
+  opacity: 0.5;
+}
+
+.hint {
+  font-size: 11px;
+  color: #666;
+  margin-top: 8px;
+}
+
+.hint a {
+  color: #0078d4;
+}
+
+/* Idle phase */
+.phase-idle {
+  text-align: center;
+}
+
+.intro-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.intro-card p {
+  color: #444;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.intro-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.intro-card li {
+  padding: 6px 0;
+  font-size: 13px;
+  color: #555;
+}
+
+.warning {
+  color: #d83b01;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* Buttons */
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background: #0078d4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  background: #106ebe;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  padding: 10px 20px;
+  background: #f3f2f1;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: #e1dfdd;
+}
+
+/* Progress phase */
+.phase-progress {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e1dfdd;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #0078d4;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  color: #555;
+  font-size: 13px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e1dfdd;
+  border-top-color: #0078d4;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 20px auto 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Review phase */
+.summary-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.summary-card h2 {
+  font-size: 15px;
+  color: #0078d4;
+  margin-bottom: 8px;
+}
+
+.summary-card p {
+  color: #444;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.summary-card ul {
+  padding-left: 20px;
+  margin-bottom: 8px;
+}
+
+.summary-card li {
+  color: #555;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.stats {
+  font-size: 12px;
+  color: #888;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.phase-review > h2 {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.action-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-left: 4px solid #0078d4;
+}
+
+.action-card.rejected {
+  opacity: 0.5;
+  border-left-color: #ccc;
+}
+
+.action-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.action-header input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #0078d4;
+  flex-shrink: 0;
+}
+
+.action-type {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.action-desc {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.action-reason {
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+  margin-left: 26px;
+}
+
+.action-count {
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+  margin-left: 26px;
+}
+
+.actions-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.actions-bar .primary-btn {
+  flex: 1;
+}
+
+/* Done phase */
+.phase-done {
+  text-align: center;
+}
+
+.phase-done h2 {
+  color: #107c10;
+  margin-bottom: 16px;
+}
+
+.results {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.results p {
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.results p:last-child {
+  border-bottom: none;
+}
+
+/* Error phase */
+.phase-error {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.phase-error h2 {
+  color: #d83b01;
+  margin-bottom: 12px;
+}
+
+.phase-error p {
+  color: #555;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}

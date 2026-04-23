@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
+
+  <Id>c7f2a9e1-3b84-4d6f-9e52-1a8c0d3f7b62</Id>
+  <Version>2.6.0.0</Version>
+  <ProviderName>OutlookGeminiAddin</ProviderName>
+  <DefaultLocale>nb-NO</DefaultLocale>
+  <DisplayName DefaultValue="E-postrydder" />
+  <Description DefaultValue="Rydd i e-postene dine med Gemini AI — skanner alle mapper og foreslår en ryddeplan." />
+  <IconUrl DefaultValue="https://geolead.no/addin/assets/icon-64.png" />
+  <HighResolutionIconUrl DefaultValue="https://geolead.no/addin/assets/icon-128.png" />
+  <SupportUrl DefaultValue="https://geolead.no" />
+
+  <AppDomains>
+    <AppDomain>https://login.microsoftonline.com</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.5" />
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://geolead.no/addin/taskpane.html" />
+        <RequestedHeight>450</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <Permissions>ReadWriteMailbox</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.5">
+        <bt:Set Name="Mailbox" />
+      </bt:Sets>
+    </Requirements>
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="grpRydder">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="Button" id="btnTaskpane">
+                  <Label resid="BtnLabel" />
+                  <Supertip>
+                    <Title resid="BtnLabel" />
+                    <Description resid="BtnTooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon16" />
+                    <bt:Image size="32" resid="Icon32" />
+                    <bt:Image size="80" resid="Icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="TaskpaneUrl" />
+                    <SupportsPinning>true</SupportsPinning>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon16" DefaultValue="https://geolead.no/addin/assets/icon-16.png" />
+        <bt:Image id="Icon32" DefaultValue="https://geolead.no/addin/assets/icon-32.png" />
+        <bt:Image id="Icon80" DefaultValue="https://geolead.no/addin/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="TaskpaneUrl" DefaultValue="https://geolead.no/addin/taskpane.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GroupLabel" DefaultValue="E-postrydder" />
+        <bt:String id="BtnLabel" DefaultValue="Rydd e-post" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="BtnTooltip" DefaultValue="Skann postboksen og få en AI-drevet ryddeplan" />
+      </bt:LongStrings>
+    </Resources>
+
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.13">
+          <bt:Set Name="Mailbox" />
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="grpRydder1">
+                  <Label resid="GroupLabel" />
+                  <Control xsi:type="Button" id="btnTaskpane1">
+                    <Label resid="BtnLabel" />
+                    <Supertip>
+                      <Title resid="BtnLabel" />
+                      <Description resid="BtnTooltip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon16" />
+                      <bt:Image size="32" resid="Icon32" />
+                      <bt:Image size="80" resid="Icon80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="TaskpaneUrl" />
+                      <SupportsPinning>true</SupportsPinning>
+                      <SupportsNoItemContext>true</SupportsNoItemContext>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon16" DefaultValue="https://geolead.no/addin/assets/icon-16.png" />
+          <bt:Image id="Icon32" DefaultValue="https://geolead.no/addin/assets/icon-32.png" />
+          <bt:Image id="Icon80" DefaultValue="https://geolead.no/addin/assets/icon-80.png" />
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="TaskpaneUrl" DefaultValue="https://geolead.no/addin/taskpane.html" />
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="GroupLabel" DefaultValue="E-postrydder" />
+          <bt:String id="BtnLabel" DefaultValue="Rydd e-post" />
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="BtnTooltip" DefaultValue="Skann postboksen og få en AI-drevet ryddeplan" />
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

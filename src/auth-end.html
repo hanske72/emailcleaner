@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth</title>
+  <script>
+    // Signal to MSAL popup monitor that redirect is complete
+    window.addEventListener("DOMContentLoaded", function () {
+      if (window.opener) {
+        // Popup flow: parent MSAL reads hash, then closes this window
+        window.close();
+      }
+    });
+  </script>
+</head>
+<body>Lukker…</body>
+</html>
