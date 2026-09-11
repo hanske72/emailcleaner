@@ -1,3 +1,7 @@
+- lese, skrive eller slette `/root/.ssh`, `~/.ssh` eller `authorized_keys`
+- endre `/etc/ssh`, SSH-porten, `ssh`/`sshd`-tjenesten, UFW eller CrowdSec
+
+SSH-tilgang og serverherding skal alltid behandles som en separat, manuelt godkjent oppgave. Etter publisering skal en **ny** SSH-tilkobling til port 7222 verifiseres før arbeidet regnes som ferdig. Hvis den feiler, skal dette meldes som en kritisk publiseringsfeil selv om nettsiden fortsatt svarer.
 # E-postrydder for Microsoft 365 Outlook
 
 Dette er det aktive prosjektet for E-postrydder. Gmail-klienten er avviklet; videre utvikling gjelder bare Microsoft 365 Outlook.
@@ -38,8 +42,12 @@ GeoLead og E-postrydder deler server og domene. En publisering av E-postrydder s
 - bruke sletting eller speiling mot en overordnet servermappe
 - endre Nginx-konfigurasjonen
 - restarte eller erstatte GeoLead-applikasjonen
+- lese, skrive eller slette `/root/.ssh`, `~/.ssh` eller `authorized_keys`
+- endre `/etc/ssh`, SSH-porten, `ssh`/`sshd`-tjenesten, UFW eller CrowdSec
 
 Bare de ferdig bygde filene fra `dist/` skal kopieres til serverens dedikerte mappe `/var/www/geolead/wwwroot/addin/`. Eksisterende live-filer skal sikkerhetskopieres først. SSH går på port 7222; bruk tilkoblingsoppsettet fra GeoLead-prosjektet og aldri anta standardport eller en gammel nøkkel.
+
+SSH-tilgang og serverherding skal alltid behandles som en separat, manuelt godkjent oppgave. Etter publisering skal en **ny** SSH-tilkobling til port 7222 verifiseres før arbeidet regnes som ferdig. Hvis den feiler, skal dette meldes som en kritisk publiseringsfeil selv om nettsiden fortsatt svarer.
 
 Etter hver publisering skal minst disse endepunktene kontrolleres:
 
