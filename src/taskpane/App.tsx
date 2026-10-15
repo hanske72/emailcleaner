@@ -19,6 +19,7 @@ import {
   archiveOldFromFolder,
   organizeByFolder,
   setStrictTokenMode,
+  resetInboxPagination,
   FolderSnapshot,
 } from "../services/outlook";
 import {
@@ -32,7 +33,20 @@ import {
 } from "../services/graphAuth";
 import "./taskpane.css";
 
-const APP_VERSION = "4.1";
+const APP_VERSION = "4.6";
+const LOG_KEY = "epostrydder_crashlog";
+
+/** Write a line to the persistent crash log in localStorage */
+function persistLog(line: string): void {
+  try {
+    const existing = localStorage.getItem(LOG_KEY) || "";
+    const lines = existing ? existing.split("\n") : [];
+    lines.push(line);
+    // Keep last 500 lines to avoid unbounded growth
+    const trimmed = lines.slice(-500);
+    localStorage.setItem(LOG_KEY, trimmed.join("\n"));
+  } catch { /* storage unavailable */ }
+}
 
 type Phase = "idle" | "working" | "done" | "error" | "quick-archive" | "organize";
 
@@ -65,7 +79,9 @@ function App() {
 
   const addLog = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString("nb-NO");
-    setDebugLog((prev) => [...prev, `[${ts}] ${msg}`]);
+    const line = `[${ts}] ${msg}`;
+    persistLog(line);
+    setDebugLog((prev) => [...prev, line]);
   }, []);
 
   // Scroll debug log to bottom
@@ -102,8 +118,34 @@ function App() {
   // Register logger and restore session on mount
   useEffect(() => {
     setDebugLogger(addLog);
+
+    // Global crash handlers — catch unhandled errors even if React unmounts
+    const onError = (e: ErrorEvent) => {
+      const msg = `[KRASJ] ${e.message} @ ${e.filename}:${e.lineno}`;
+      persistLog(msg);
+      addLog(msg);
+    };
+    const onUnhandled = (e: PromiseRejectionEvent) => {
+      const msg = `[UHANDLET PROMISE] ${e.reason?.message || String(e.reason)}`;
+      persistLog(msg);
+      addLog(msg);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandled);
+
+    // Load persisted log from last session, with a clear separator
+    try {
+      const saved = localStorage.getItem(LOG_KEY);
+      if (saved) {
+        const lines = saved.split("\n").filter(Boolean);
+        const separator = `--- FORRIGE SESJON (${lines.length} linjer) ---`;
+        setDebugLog([...lines, separator]);
+      }
+    } catch { /* ignore */ }
+
     addLog(`App startet v${APP_VERSION}`);
     addLog(`Office.context: ${typeof Office !== "undefined" && Office.context ? "OK" : "MANGLER"}`);
+
     tryRestoreSession().then((ok) => {
       if (ok) {
         const user = getSignedInUser() || "(bruker uten e-post)";
@@ -115,6 +157,11 @@ function App() {
     }).catch((e) => {
       addLog(`Sesjonsfeil: ${e.message}`);
     });
+
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
   }, [addLog]);
 
   const handleSaveSettings = () => {
@@ -157,6 +204,7 @@ function App() {
     }
 
     setStrictTokenMode(true);
+    resetInboxPagination();
 
     try {
       // Step 1: Scan folder structure (once)
@@ -253,7 +301,9 @@ function App() {
           percent: Math.min(95, Math.round((totalProcessed / startCount) * 100)),
         });
 
+        addLog(`Batch ${batchNum}: AI analyserer ${messages.length} meldinger...`);
         const actions = await analyzeBatch(messages, folders, batchNum, startCount - totalProcessed, addLog);
+        addLog(`Batch ${batchNum}: AI returnerte ${actions.length} handlinger`);
 
         // Execute actions
         let batchMoved = 0;
@@ -262,42 +312,56 @@ function App() {
           percent: Math.min(95, Math.round((totalProcessed / startCount) * 100)),
         });
 
-        for (const action of actions) {
+        for (let ai = 0; ai < actions.length; ai++) {
+          const action = actions[ai];
+          addLog(`  [${ai + 1}/${actions.length}] ${action.type} "${action.description || ""}" idx=[${(action.messageIndices || []).join(",")}]`);
           try {
             if (action.type === "create_folder" && action.newFolderName) {
-              await resolveFolderPath(action.newFolderName);
+              const fid = await resolveFolderPath(action.newFolderName);
+              addLog(`    \u2713 Mappe: "${action.newFolderName}" id=${fid}`);
             } else if (action.type === "move" && action.targetFolder) {
               const targetId = await resolveFolderPath(action.targetFolder);
               const ids = (action.messageIndices || [])
                 .filter((i: number) => i >= 0 && i < messages.length)
                 .map((i: number) => messages[i].id);
+              addLog(`    Flytter ${ids.length} til "${action.targetFolder}"`);
               if (ids.length > 0) {
-                batchMoved += await moveMessages(ids, targetId);
+                const n = await moveMessages(ids, targetId);
+                addLog(`    \u2713 ${n}/${ids.length} flyttet`);
+                batchMoved += n;
               }
             } else if (action.type === "archive") {
               let archiveId = folderMap["arkiv"] || folderMap["archive"];
               if (!archiveId) {
                 archiveId = await createFolder("Arkiv");
                 folderMap["arkiv"] = archiveId;
+                addLog(`    Arkiv opprettet id=${archiveId}`);
               }
               const ids = (action.messageIndices || [])
                 .filter((i: number) => i >= 0 && i < messages.length)
                 .map((i: number) => messages[i].id);
+              addLog(`    Arkiverer ${ids.length}`);
               if (ids.length > 0) {
-                batchMoved += await moveMessages(ids, archiveId);
+                const n = await moveMessages(ids, archiveId);
+                addLog(`    \u2713 ${n}/${ids.length} arkivert`);
+                batchMoved += n;
               }
             } else if (action.type === "delete") {
               const ids = (action.messageIndices || [])
                 .filter((i: number) => i >= 0 && i < messages.length)
                 .map((i: number) => messages[i].id);
+              addLog(`    Sletter ${ids.length}`);
               if (ids.length > 0) {
-                batchMoved += await deleteMessages(ids);
+                const n = await deleteMessages(ids);
+                addLog(`    \u2713 ${n}/${ids.length} slettet`);
+                batchMoved += n;
               }
+            } else {
+              addLog(`    UKJENT type=${action.type} — hopper over`);
             }
           } catch (e: any) {
             if (e.message === "TOKEN_EXPIRED") throw e;
-            const actionName = action.description || action.type || "Ukjent handling";
-            addLog(`  \u274C ${actionName}: ${e.message}`);
+            addLog(`    \u274c FEIL handling ${ai + 1}: ${e.message}`);
           }
           if (messages.length > 10) {
             await new Promise(r => setTimeout(r, 25));
@@ -331,7 +395,8 @@ function App() {
         totalMoved += batchMoved;
         totalProcessed += messages.length;
         setResults(prev => [...prev, `\u2705 Batch ${batchNum}: ${batchMoved}/${messages.length} e-poster sortert`]);
-        addLog(`Batch ${batchNum}: ${batchMoved} sortert. Totalt: ${totalMoved}/${totalProcessed}`);
+        addLog(`Batch ${batchNum} ferdig: ${batchMoved}/${messages.length} sortert. Totalt: ${totalMoved}/${totalProcessed}/${startCount}`);
+        persistLog(`[CHECKPOINT] batch=${batchNum} moved=${batchMoved} totalProcessed=${totalProcessed} totalMoved=${totalMoved}`);
 
         if (messages.length > 20) {
           await new Promise(r => setTimeout(r, 100));
@@ -342,13 +407,17 @@ function App() {
       setResults(prev => [...prev, `\n\u{1F389} Ferdig! ${totalMoved} e-poster sortert i ${batchNum} batch(er).`]);
       setPhase("done");
     } catch (e: any) {
-      addLog(`Feil: ${e.message}`);
+      const errMsg = e.message || String(e);
+      addLog(`❌ KRASJ i startAutoClean: ${errMsg}`);
+      addLog(`Stack: ${e.stack?.split("\n").slice(0, 4).join(" | ") || "(ingen stack)"}`);
+      persistLog(`[KRASJ] ${errMsg}`);
       setError(e.message === "TOKEN_EXPIRED"
         ? "Sesjonen utløp. Logg inn på nytt og prøv igjen."
-        : (e.message || "Ukjent feil"));
+        : (errMsg || "Ukjent feil"));
       setPhase("error");
     } finally {
       setStrictTokenMode(false);
+      addLog("--- AUTO-CLEAN AVSLUTTET ---");
     }
   }, [addLog]);
 
@@ -444,7 +513,21 @@ function App() {
         <div className="debug-panel">
           <div className="debug-header">
             <strong>Feilsøkingslogg</strong>
-            <button onClick={() => setDebugLog([])}>Tøm</button>
+            <button onClick={() => {
+              const text = debugLog.join("\n");
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(() => {
+                  // Clipboard blocked (common in Office add-ins) — fall back to prompt
+                  window.prompt("Kopier teksten nedenfor:", text);
+                });
+              } else {
+                window.prompt("Kopier teksten nedenfor:", text);
+              }
+            }} title="Kopier logg">📋 Kopi</button>
+            <button onClick={() => {
+              setDebugLog([]);
+              try { localStorage.removeItem(LOG_KEY); } catch { }
+            }}>Tøm</button>
           </div>
           <div className="debug-log" ref={debugRef}>
             {debugLog.length === 0 ? (
@@ -539,7 +622,7 @@ function App() {
             </p>
             <ul>
               <li>{"\u{1F4C1}"} Skanner mappestruktur</li>
-              <li>{"\u{1F9E0}"} AI analyserer i batcher \u00e0 50</li>
+              <li>{"\u{1F9E0}"} AI analyserer 50 e-poster per batch</li>
               <li>{"\u{1F4E6}"} Flytter automatisk etter analyse</li>
               <li>{"\u{1F504}"} Fortsetter til innboksen er tom</li>
             </ul>

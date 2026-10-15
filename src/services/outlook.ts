@@ -49,16 +49,29 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const GRAPH_TIMEOUT_MS = 15000;
+
 async function graphFetch(path: string, init?: RequestInit, retries = 3): Promise<Response> {
   const token = _useStrictTokenMode ? await getGraphTokenSafe() : await getGraphToken();
-  const res = await fetch(`${GRAPH}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GRAPH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${GRAPH}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...(init?.headers || {}),
+      },
+    });
+  } catch (e: any) {
+    clearTimeout(timer);
+    if (e.name === "AbortError") throw new Error(`Graph timeout etter ${GRAPH_TIMEOUT_MS / 1000}s: ${path}`);
+    throw e;
+  }
+  clearTimeout(timer);
   if (res.status === 429 && retries > 0) {
     const retryAfter = parseInt(res.headers.get("Retry-After") || "5", 10);
     await delay(retryAfter * 1000);
@@ -351,16 +364,23 @@ export async function scanFolderStructure(
   return { folders, inboxId, inboxCount, otherInboxId, otherInboxCount };
 }
 
-/** Fetch a batch of messages from inbox (newest first).
+export function resetInboxPagination(): void {
+  // Kept for compatibility with existing callers.
+  // Batch fetching now always re-queries oldest messages from the top,
+  // which is stable while messages are moved/deleted between rounds.
+}
+
+/** Fetch a batch of messages from inbox (oldest first to ensure sequential processing).
  *  When the main inbox (Focused tab) is empty and an "Other" folder is provided,
- *  falls back to fetching from the Other folder so Focused Inbox is fully processed. */
+ *  falls back to fetching from the Other folder so Focused Inbox is fully processed.
+ *  Re-queries from the top each round because moved/deleted messages invalidate cursors. */
 export async function fetchInboxBatch(
   inboxFolderId: string,
   top: number = 50,
   otherFolderId?: string,
 ): Promise<MailMessage[]> {
   const msgRes = await graphGet(
-    `/mailFolders/${inboxFolderId}/messages?$top=${top}&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,isRead`
+    `/mailFolders/${inboxFolderId}/messages?$top=${top}&$orderby=receivedDateTime asc&$select=id,subject,from,receivedDateTime,isRead`
   );
   const messages = ((msgRes.value || []) as any[]).map((m: any, idx: number) => ({
     id: m.id,
@@ -378,9 +398,9 @@ export async function fetchInboxBatch(
   if (messages.length === 0 && otherFolderId) {
     try {
       const otherRes = await graphGet(
-        `/mailFolders/${otherFolderId}/messages?$top=${top}&$orderby=receivedDateTime desc&$select=id,subject,from,receivedDateTime,isRead`
+        `/mailFolders/${otherFolderId}/messages?$top=${top}&$orderby=receivedDateTime asc&$select=id,subject,from,receivedDateTime,isRead`
       );
-      return ((otherRes.value || []) as any[]).map((m: any, idx: number) => ({
+      const otherMessages = ((otherRes.value || []) as any[]).map((m: any, idx: number) => ({
         id: m.id,
         index: idx,
         subject: m.subject || "(uten emne)",
@@ -391,6 +411,8 @@ export async function fetchInboxBatch(
         folderId: otherFolderId,
         folderName: "Innboks / Annet",
       }));
+
+      return otherMessages;
     } catch { /* ignore if Other folder is inaccessible */ }
   }
 
